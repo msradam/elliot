@@ -1,8 +1,9 @@
 # elliot
 
-An LLM-driven state machine in control of a simulated robot. The model does not
-hold the wheel. A state machine does, and the model has to ask it for permission
-to move on.
+A robot that is a finite state machine. Its sensors are the state, an LLM drives
+the transitions, and the machine refuses any move the world has not earned.
+
+![Elliot running](media/elliot.gif)
 
 ---
 
@@ -182,8 +183,9 @@ end to end through the real MCP server.
 
 ## the recording
 
-[`recording.cast`](recording.cast) is an asciinema capture of a full run, boot to
-ghost. Play it back with `asciinema play recording.cast`.
+The GIF above is an excerpt. [`recording.cast`](recording.cast) is the full
+asciinema capture, boot to ghost, with the narration streaming in. Play it back
+with `asciinema play recording.cast`.
 
 ## development
 
