@@ -3,11 +3,7 @@
 ```
   ════════════════════════════════════════════════════════════════
 
-     E L L I O T                                          fsociety
-
-  ────────────────────────────────────────────────────────────────
-
-     our robot has been hacked.
+     E L L I O T                          (yes, named after him.)
 
   ════════════════════════════════════════════════════════════════
 
@@ -15,9 +11,9 @@
    state. an llm drives the transitions. the machine refuses any
    move the world has not earned.
 
-   hello, friend. "hello, friend"? that's lame. but you are about
-   to run something that thinks, and i would rather you knew how
-   little of it gets to decide. read this before you run me.
+   hello, friend. you are about to run something that thinks, and i
+   would rather you knew how little of it actually gets to decide.
+   read this before you run me.
 ```
 
 ```
@@ -31,8 +27,8 @@
 
     boot     wake up. read my own senses twice, make them agree,
              then start. i trust nothing yet, least of all me.
-    recon    fsociety. close on the target through open ground,
-             around whatever is in the way, until it is real.
+    recon    close on the target through open ground, around
+             whatever is in the way, until it is real.
     exploit  the breach. drive onto it. all the way on, not near.
     exfil    take what i came for and run home.
     ghost    gone. there was never anyone here.
@@ -42,7 +38,7 @@
 ```
 
 ```
-─[ control is an illusion ]─────────────────────────────────────
+─[ who is actually in control ]─────────────────────────────────
 
   i am eager. the second i think i am ready i reach for the next
   phase. i would rather grab for exfil a metre short and be told
@@ -201,7 +197,7 @@
 
   built with llm assistance. mit licensed.
 
-  control is an illusion. the machine still says no.
+  i can reach for anything i want. the machine still says no.
 
                                                           // elliot
 ```

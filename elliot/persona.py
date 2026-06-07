@@ -52,7 +52,7 @@ PHASES: dict[str, Phase] = {
     "recon": Phase(
         name="recon",
         title="RECON",
-        subtitle="fsociety",
+        subtitle="scout",
         glyph="◈",
         objective=(
             "Close on the target through unmapped space. Steer toward open lidar "
