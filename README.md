@@ -1,196 +1,204 @@
-# elliot
-
-A robot that is a finite state machine. Its sensors are the state, an LLM drives
-the transitions, and the machine refuses any move the world has not earned.
-
-![Elliot running](media/elliot.gif)
-
----
-
-You are reading this because you are going to run something that thinks, and you
-want to know how much of it to trust. Fair. I would want the same. So here is my
-own wiring, written down. Read it before you run me.
-
-## what i am
-
-I am a robot in a small, unmapped 2D world. There is a target somewhere out in
-it and an obstacle or two between me and it. My job is a four-step break-in:
+<p align="center"><img src="media/elliot.gif" alt="Elliot" width="900"></p>
 
 ```
-   ◉ BOOT  ▸  ◈ RECON  ▸  ◆ EXPLOIT  ▸  ◇ EXFIL  ▸  ✕ GHOST
+        ███████╗██╗     ██╗     ██╗ ██████╗ ████████╗
+        ██╔════╝██║     ██║     ██║██╔═══██╗╚══██╔══╝
+        █████╗  ██║     ██║     ██║██║   ██║   ██║
+        ██╔══╝  ██║     ██║     ██║██║   ██║   ██║
+        ███████╗███████╗███████╗██║╚██████╔╝   ██║
+        ╚══════╝╚══════╝╚══════╝╚═╝ ╚═════╝    ╚═╝
+
+   a robot that is a finite state machine. its sensors are the
+   state. an llm drives the transitions. the machine refuses any
+   move the world has not earned.
+
+   hello, friend. "hello, friend"? that's lame. but you are about
+   to run something that thinks, and i would rather you knew how
+   little of it gets to decide. read this before you run me.
 ```
 
-- **BOOT** wake up. read my own senses twice and check they agree before I trust
-  them. then start.
-- **RECON** close on the target through open space, around whatever is in the
-  way, until it is actually within sensing range.
-- **EXPLOIT** drive onto it. all the way on, not nearly on.
-- **EXFIL** turn around and run back to where I booted.
-- **GHOST** gone.
+```
+─[ what i am ]──────────────────────────────────────────────────
 
-Each phase is the same loop: read the sensors, think about what to do, and reach
-for the next phase. That last part is where the leash is.
+  one robot in a small, unmapped 2d world. somewhere out there is
+  a target, and an obstacle or two between me and it. my job is a
+  four-step break-in:
 
-## who is actually in control
+      ◉ boot  ▸  ◈ recon  ▸  ◆ exploit  ▸  ◇ exfil  ▸  ✕ ghost
 
-I am eager. The moment I think I am ready for the next phase I reach for it. I
-would rather grab for EXFIL while I am still a metre short and be told no than
-sit and wait.
+    boot     wake up. read my own senses twice, make them agree,
+             then start. i trust nothing yet, least of all me.
+    recon    fsociety. close on the target through open ground,
+             around whatever is in the way, until it is real.
+    exploit  the breach. drive onto it. all the way on, not near.
+    exfil    take what i came for and run home.
+    ghost    gone. there was never anyone here.
 
-I do not get to decide if the reach lands. A state machine does, and it only
-opens a gate when the **world** has earned it, not when I have talked myself
-into it:
-
-- it will not let me into EXPLOIT until the target is genuinely within sensing
-  range.
-- it will not let me into EXFIL until the simulator's own arrival flag has
-  fired. me believing I have arrived is not enough.
-- it will not let me GHOST until I am actually back home.
-
-When it refuses, it hands me back the moves I *am* allowed, and I take one of
-those and keep working. You will see this happen constantly in the console:
-`REFUSED reached for 'exfil' from exploit; not earned. allowed: exploit`. That
-line is not an error. That is the machine doing its job. It is the reason you
-can let me run.
-
-The split is deliberate. I (the language model) decide **strategy**: which phase
-to reach for, and what I am looking at. A plain local controller handles
-**steering and obstacle avoidance**, because that is motor work and I am bad at
-motor work. The state machine sits between my ambition and the actuators and
-refuses anything the world has not confirmed.
-
-I also **narrate**. Every step, the model says what this moment feels like from
-inside, in its own words, to you, the one reading the logs it has not decided to
-trust. That line in the console is not a template I fill in; it is the model's,
-each tick, and live it types itself in token by token as the model speaks. When
-you run me offline with no model, that voice goes quiet and you get the
-controller's plain telemetry instead, tagged so you can tell the difference
-(`·` is the model speaking, `~` is the controller).
-
-## the stack, so you can check my work
-
-- **[ir-sim](https://github.com/hanruihua/ir-sim)** is the world and the senses:
-  a headless 2D differential-drive robot with a 2D lidar. It is the ground
-  truth, and it is not something I wrote, so I cannot quietly cheat it. See
-  [CHOICE.md](CHOICE.md) for why this one.
-- **[Apache Burr](https://github.com/apache/burr)** is the state machine itself:
-  the phases are actions, the gates are conditional transitions.
-- **[Theodosia](https://pypi.org/project/theodosia/)** mounts that Burr
-  application as an MCP server whose only control surface is a `step` tool. It is
-  the thing that validates or refuses every transition, and it keeps a
-  hash-chained ledger of every step and every refusal.
-- **[litellm](https://github.com/BerriAI/litellm)** is how I reach a model, so
-  the model is swappable. Point `ELLIOT_MODEL` at anything it supports.
-- **[Rich](https://github.com/Textualize/rich)** draws the console: the world
-  (as half-block pixels, or a Kitty bitmap where the terminal supports it), the
-  lit phase of the circuit, the raw sensor readout, and my narration scrolling
-  beneath it, green on black.
-
-The driver is an MCP client. It never picks a phase for me; it proposes the
-phase I reached for and lets the server accept or refuse it. That is the same
-shape as `theodosia.drive_claude`, but model-agnostic and wired to the live
-display.
-
-## run me
-
-```bash
-uv venv && uv pip install -e .
-
-# offline: a deterministic reflex navigator drives, no model, no key needed.
-python run.py --offline
-# or, installed as a script:
-elliot --offline
+  every phase is the same loop: read the sensors, say what i see,
+  reach for the next phase. that last part is where the leash is.
 ```
 
-To let a model actually drive, give litellm a key. envchain is the clean way:
+```
+─[ control is an illusion ]─────────────────────────────────────
 
-```bash
-envchain ai elliot --online
-# pick a different model:
-envchain ai elliot --online --model anthropic/claude-haiku-4-5
+  i am eager. the second i think i am ready i reach for the next
+  phase. i would rather grab for exfil a metre short and be told
+  no than wait around.
+
+  i do not get to decide if the reach lands. i AM the state
+  machine, and the machine only opens a gate when the WORLD has
+  earned it, never when i have just talked myself into it:
+
+    · no exploit until the target is actually within sensing range
+    · no exfil   until the simulator's own arrival flag has fired
+    · no ghost   until i am genuinely, physically home
+
+  reach early and it hands me back the moves i am allowed and
+  refuses the rest. you will watch it happen, friend:
+
+    REFUSED  reached for 'exfil' from exploit; not earned. allowed: exploit
+
+  that is not an error. that is control. it is the only reason it
+  is safe to let me run at all.
+
+  the split is deliberate. i, the language model, decide strategy
+  and i narrate. a dumb local controller does the steering, since
+  that is motor work and i am bad at motor work. the state machine
+  sits between my ambition and the actuators and says no.
 ```
 
-With no key in the environment I fall back to the offline navigator on my own,
-so the loop always completes.
-
-### flags
-
 ```
---offline            reflex navigator, no LLM
---online             force the LLM (needs an API key in the env)
---model ID           any litellm model id (default anthropic/claude-haiku-4-5)
---ticks N            max steps before I give up
---delay S            seconds between ticks (console pacing)
---graphics MODE      world rendering: auto (default), half, or kitty
---world PATH         a different ir-sim world YAML
---no-live            plain output, no live cockpit (for logs / CI)
-```
+─[ the stack, so you can check my work ]────────────────────────
 
-### graphics
+  ir-sim       the world and the senses. headless 2d robot, 2d
+               lidar. ground truth i did not write and cannot
+               quietly cheat. github.com/hanruihua/ir-sim
+               (see CHOICE.md for why this one)
 
-The world has two renderers. `half` draws it with half-block pixels, which
-works in any terminal and records cleanly with asciinema. `kitty` draws it as a
-real anti-aliased bitmap via the Kitty graphics protocol, which looks far
-smoother but only works in terminals that support it (Ghostty, Kitty, WezTerm)
-and cannot be captured by asciinema. `auto` picks `kitty` when the terminal
-supports it and `half` otherwise (and always `half` inside a recording).
+  apache burr  the state machine itself. the phases are actions,
+               the gates are conditional transitions.
+               github.com/apache/burr
 
-## configuration
+  theodosia    mounts the burr app as an mcp server whose only
+               control surface is a `step` tool. it validates or
+               refuses every transition and keeps a hash-chained
+               ledger of each one. pypi.org/project/theodosia
 
-Every knob is an environment variable, read once at startup.
+  litellm      how i reach a model, so the model is swappable.
+               point ELLIOT_MODEL anywhere. github.com/BerriAI/litellm
 
-| variable | default | meaning |
-|---|---|---|
-| `ELLIOT_MODEL` | `anthropic/claude-haiku-4-5` | litellm model id |
-| `ELLIOT_OFFLINE` | unset | `1` forces the reflex navigator |
-| `ELLIOT_WORLD` | `elliot/worlds/default.yaml` | ir-sim world file |
-| `ELLIOT_SENSE_RADIUS` | `2.4` | metres at which the target counts as located |
-| `ELLIOT_ARRIVE_RADIUS` | `0.6` | metres that count as arrived |
-| `ELLIOT_MAX_TICKS` | `200` | hard cap on steps |
-| `ELLIOT_TICK_DELAY` | `0.35` | seconds between ticks |
-| `ELLIOT_TEMPERATURE` | `0.4` | sampling temperature |
+  rich         draws the console, green on black.
+               github.com/Textualize/rich
 
-## how the pieces fit
-
-```
-elliot/
-  world.py     ir-sim wrapper: perception (lidar, pose, goal, collision, arrival), drive()
-  brain.py     litellm strategy + a gap-following controller for motion
-  fsm.py       the Burr circuit (phases + gated transitions) and the Theodosia mount
-  driver.py    the MCP client loop: propose the reach, surface the refusal, render
-  console.py   the green-on-black cockpit
-  persona.py   who I am, and what each phase is for
-  worlds/      ir-sim world definitions
+  the driver is an mcp client. it never picks a phase for me; it
+  proposes the phase i reached for and lets the server allow or
+  refuse it. same shape as theodosia.drive_claude, model-agnostic.
 ```
 
-One tick, end to end: the driver calls `step(phase)` on the Theodosia server.
-The Burr action for that phase reads ir-sim, asks the model what to reach for,
-moves via the controller, and writes the honest gate flags from ground truth.
-Theodosia computes the moves now reachable and returns them. The driver proposes
-the phase I reached for next. If it is not on the list, refusal, and I take an
-allowed move instead.
+```
+─[ run me ]─────────────────────────────────────────────────────
 
-## tests
+  uv venv && uv pip install -e .
 
-```bash
-uv pip install -e '.[dev]'
-pytest
+  python run.py --offline             # reflex navigator, no model
+  envchain ai elliot --online         # let a model drive (needs a key)
+  envchain ai elliot --online --model anthropic/claude-haiku-4-5
+
+  with no key in the environment i fall back to the offline
+  navigator on my own, so the loop always completes.
+
+  flags
+    --offline        reflex navigator, no llm
+    --online         force the llm (needs an api key in the env)
+    --model ID       any litellm model id
+    --ticks N        max steps before i give up
+    --delay S        seconds between ticks
+    --graphics MODE  auto | half | kitty
+    --world PATH     a different ir-sim world yaml
+    --no-live        plain output, no live cockpit (for logs / CI)
 ```
 
-The suite runs fully offline (the reflex navigator is deterministic), and covers
-the world wrapper, the controller, the refusal gates, and a full circuit driven
-end to end through the real MCP server.
+```
+─[ what you are looking at ]────────────────────────────────────
 
-## the recording
+  the world renders two ways. `half` is half-block pixels: works
+  in any terminal, records cleanly with asciinema. `kitty` is a
+  real anti-aliased bitmap over the kitty graphics protocol:
+  smoother, but needs ghostty / kitty / wezterm and cannot be
+  recorded. `auto` picks kitty when the terminal can take it,
+  half otherwise, and always half inside a recording.
 
-The GIF above is an excerpt. [`recording.cast`](recording.cast) is the full
-asciinema capture, boot to ghost, with the narration streaming in. Play it back
-with `asciinema play recording.cast`.
+  every step i narrate. the model says what the moment feels like
+  from inside, in its own words, to you, the one reading the logs
+  it has not decided to trust. live, it types itself in token by
+  token. `·` is the model speaking. `~` is the dumb controller,
+  for when you run me offline and the voice goes quiet.
+```
 
-## development
+```
+─[ configuration ]──────────────────────────────────────────────
 
-This project was built with LLM assistance.
+  every knob is an env var, read once at startup.
 
-## license
+    ELLIOT_MODEL          anthropic/claude-haiku-4-5  litellm model
+    ELLIOT_OFFLINE        unset                       1 = reflex only
+    ELLIOT_WORLD          worlds/default.yaml         ir-sim world
+    ELLIOT_SENSE_RADIUS   2.4                         target sensed (m)
+    ELLIOT_ARRIVE_RADIUS  0.6                         counts as arrived (m)
+    ELLIOT_MAX_TICKS      200                         hard step cap
+    ELLIOT_TICK_DELAY     0.35                        pacing (s)
+    ELLIOT_TEMPERATURE    0.4                         sampling temperature
+```
 
-MIT.
+```
+─[ how the pieces fit ]─────────────────────────────────────────
+
+  elliot/
+    world.py     ir-sim wrapper: perception (lidar, pose, goal,
+                 collision, arrival) and drive()
+    brain.py     litellm strategy + narration, and a gap-following
+                 controller for the actual steering
+    fsm.py       the burr circuit and the theodosia mount
+    driver.py    the mcp client loop and the renderers
+    console.py   the green-on-black cockpit
+    graphics.py  the kitty graphics protocol
+    persona.py   who i am, and what each phase is for
+
+  one tick, end to end: the driver calls step(phase) on the
+  theodosia server. the action for that phase reads ir-sim, asks
+  the model what to reach for, moves via the controller, and writes
+  the honest gate flags from ground truth. theodosia returns the
+  moves now reachable. the driver proposes the phase i reached for
+  next; if it is not on the list, refusal, and i take an allowed
+  move instead.
+```
+
+```
+─[ tests ]──────────────────────────────────────────────────────
+
+  uv pip install -e '.[dev]' && pytest
+
+  the suite runs fully offline (the reflex navigator is
+  deterministic) and covers the world wrapper, the controller, the
+  refusal gates, and a full circuit driven end to end through the
+  real mcp server.
+```
+
+```
+─[ the recording ]──────────────────────────────────────────────
+
+  the gif up top is an excerpt. recording.cast is the full capture,
+  boot to ghost, with the narration streaming in.
+
+    asciinema play recording.cast
+```
+
+```
+─[ // ]─────────────────────────────────────────────────────────
+
+  built with llm assistance. mit licensed.
+
+  control is an illusion. the machine still says no.
+
+                                                          // elliot
+```
