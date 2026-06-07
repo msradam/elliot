@@ -155,7 +155,7 @@ class World:
         return bool(self._robot.arrive) or distance <= CONFIG.arrive_radius
 
     def drive(self, linear: float, angular: float) -> None:
-        self._env.step(np.array([[float(linear)], [float(angular)]]))
+        self._env.step(np.array([[linear], [angular]]))
         self._tick += 1
         self._record_trail()
 
@@ -171,7 +171,7 @@ class World:
 
     @property
     def trail(self) -> list[tuple[float, float]]:
-        return list(self._trail)
+        return self._trail.copy()
 
     @property
     def width(self) -> float:

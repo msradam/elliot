@@ -45,6 +45,26 @@ _PX = {
 _WAKE = 26
 
 
+def _halfblock_text(grid: list[list[str | None]], rows: int, cols: int) -> Text:
+    """fold a pixel grid into half-block rows: top pixel as fg, bottom as bg."""
+    body = Text()
+    for r in range(rows):
+        top, bottom = grid[2 * r], grid[2 * r + 1]
+        for c in range(cols):
+            t, b = top[c], bottom[c]
+            if t is None and b is None:
+                body.append(" ")
+            elif b is None:
+                body.append("▀", style=t)
+            elif t is None:
+                body.append("▄", style=b)
+            else:
+                body.append("▀", style=f"{t} on {b}")
+        if r < rows - 1:
+            body.append("\n")
+    return body
+
+
 class Cockpit:
     """holds the log and the latest frame; draws the whole dashboard."""
 
@@ -163,19 +183,40 @@ class Cockpit:
             )
 
         step = W / pw  # world metres per pixel, for edge detection
-        for owx, owy, orad in self.world.obstacles():
-            for py in range(offy, offy + phh):
-                for px_ in range(offx, offx + pw):
-                    wx = (px_ - offx) / max(pw - 1, 1) * W
-                    wy = H - (py - offy) / max(phh - 1, 1) * H
-                    d = math.hypot(wx - owx, wy - owy)
-                    if d <= orad:
-                        if d >= orad - step:
-                            put(py, px_, _PX["wall_rim"])
-                        elif d >= orad - 2 * step:
-                            put(py, px_, _PX["wall"])
-                        else:
-                            put(py, px_, _PX["wall_core"])
+
+        def paint_obstacles() -> None:
+            for owx, owy, orad in self.world.obstacles():
+                for py in range(offy, offy + phh):
+                    for px_ in range(offx, offx + pw):
+                        wx = (px_ - offx) / max(pw - 1, 1) * W
+                        wy = H - (py - offy) / max(phh - 1, 1) * H
+                        d = math.hypot(wx - owx, wy - owy)
+                        if d > orad:  # three bands give the disc a soft, rounded edge
+                            continue
+                        band = (
+                            "wall_rim"
+                            if d >= orad - step
+                            else "wall"
+                            if d >= orad - 2 * step
+                            else "wall_core"
+                        )
+                        put(py, px_, _PX[band])
+
+        def paint_robot() -> None:
+            p = self.frame.get("perception") or {}
+            pos = p.get("position")
+            if not pos:
+                return
+            ry, rx = to_px(pos[0], pos[1])
+            theta = math.radians(p.get("heading_deg", 0.0))
+            phase = self.frame.get("phase", "")
+            if phase != "ghost" and not p.get("collision"):  # a short nose shows heading
+                for k, color in zip((1, 2), _PX["nose"]):
+                    put(ry - round(math.sin(theta) * k), rx + round(math.cos(theta) * k), color)
+            color = "collision" if p.get("collision") else "ghost" if phase == "ghost" else "robot"
+            put(ry, rx, _PX[color])
+
+        paint_obstacles()
 
         # a short fading wake of where i have just been, only behind me, not the
         # whole route, so the bright head reads as the leading end and nothing
@@ -183,51 +224,21 @@ class Cockpit:
         wake = self.world.trail[-(_WAKE + 1) : -1]
         ramp = _PX["wake"]
         for i, (tx, ty) in enumerate(wake):
-            color = ramp[min(len(ramp) - 1, i * len(ramp) // max(len(wake), 1))]
-            put(*to_px(tx, ty), color, over=False)
+            put(
+                *to_px(tx, ty),
+                ramp[min(len(ramp) - 1, i * len(ramp) // max(len(wake), 1))],
+                over=False,
+            )
 
         put(*to_px(*self.world.origin), _PX["origin"])
 
         gy, gx = to_px(*self.world.goal)
-        pulse = self.frame.get("tick", 0) % 2 == 0
         for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             put(gy + dy, gx + dx, _PX["goal_halo"], over=False)
-        put(gy, gx, _PX["goal_hot"] if pulse else _PX["goal"])
+        put(gy, gx, _PX["goal_hot"] if self.frame.get("tick", 0) % 2 == 0 else _PX["goal"])
 
-        p = self.frame.get("perception") or {}
-        pos = p.get("position")
-        if pos:
-            ry, rx = to_px(pos[0], pos[1])
-            theta = math.radians(p.get("heading_deg", 0.0))
-            phase = self.frame.get("phase", "")
-            moving = phase != "ghost" and not p.get("collision")
-            if moving:  # a short bright nose ahead of the head, showing heading
-                for k, color in zip((1, 2), _PX["nose"]):
-                    put(ry - round(math.sin(theta) * k), rx + round(math.cos(theta) * k), color)
-            if p.get("collision"):
-                robot = _PX["collision"]
-            elif phase == "ghost":
-                robot = _PX["ghost"]
-            else:
-                robot = _PX["robot"]
-            put(ry, rx, robot)
-
-        body = Text()
-        for r in range(rows):
-            top, bottom = grid[2 * r], grid[2 * r + 1]
-            for c in range(cols):
-                t, b = top[c], bottom[c]
-                if t is None and b is None:
-                    body.append(" ")
-                elif b is None:
-                    body.append("▀", style=t)
-                elif t is None:
-                    body.append("▄", style=b)
-                else:
-                    body.append("▀", style=f"{t} on {b}")
-            if r < rows - 1:
-                body.append("\n")
-        return body
+        paint_robot()
+        return _halfblock_text(grid, rows, cols)
 
     def world_png(self, side: int = 760) -> bytes:
         """draw the world as a smooth anti-aliased png (for the kitty mode).

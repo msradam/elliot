@@ -14,6 +14,7 @@ gate is a fact the world has to supply, not a claim i can make:
 
 from __future__ import annotations
 
+import contextlib
 import math
 from typing import Any
 
@@ -169,17 +170,16 @@ def build_application(world: World, brain: Brain, *, with_tracker: bool = True) 
         .with_state(**initial_state())
     )
     if with_tracker:
-        try:
+        with contextlib.suppress(Exception):
             import theodosia
 
             builder = builder.with_tracker(theodosia.tracker("elliot"))
-        except Exception:
-            pass
     return builder.build()
 
 
-def _next_hint(state, valid_next_actions, last_action, refusal=None) -> str | None:
-    """one line of guidance stapled to every step response."""
+def _next_hint(_state, valid_next_actions, _last_action, refusal=None) -> str | None:
+    """one line of guidance stapled to every step response. theodosia calls this
+    positionally as (state, valid_next_actions, last_action, refusal)."""
     if refusal is not None:
         return "the machine refused that. you have not earned it yet. read valid_next_actions."
     if not valid_next_actions:

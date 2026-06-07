@@ -37,6 +37,10 @@ target-version = "py311"
 [tool.ruff.lint]
 extend-select = ["UP", "FURB", "I"]
 
+[tool.refurb]
+# FURB124 (chained `is`) and FURB140 (starmap) read worse than the explicit form.
+ignore = [124, 140]
+
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]

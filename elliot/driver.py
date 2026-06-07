@@ -9,6 +9,7 @@ inside the actions, through litellm) and wired to the cockpit.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import os
 import sys
@@ -27,12 +28,11 @@ def _quiet() -> None:
     for name in ("theodosia", "fastmcp", "mcp", "FastMCP", "LiteLLM", "litellm", "httpx"):
         logging.getLogger(name).setLevel(logging.ERROR)
     warnings.filterwarnings("ignore")
-    try:  # ir-sim logs through loguru, which stdlib logging cannot reach
+    # ir-sim logs through loguru, which stdlib logging cannot reach
+    with contextlib.suppress(Exception):
         from loguru import logger as _loguru
 
         _loguru.disable("irsim")
-    except Exception:
-        pass
 
 
 def _fallback(valid: list[str]) -> str | None:
@@ -128,12 +128,10 @@ async def drive(
 async def _cold_start(client, cockpit: Cockpit) -> None:
     """read the circuit map once at session start, before i trust it."""
     cockpit.note("cold boot. reading the circuit map before i trust it.", "bright_green")
-    try:
+    with contextlib.suppress(Exception):
         res = await client.read_resource("theodosia://graph")
         if res and getattr(res[0], "text", ""):
             cockpit.note("circuit loaded. boot, recon, exploit, exfil, ghost.", "grey50")
-    except Exception:
-        pass
 
 
 def _select_renderer(cockpit: Cockpit, live: bool, graphics: str):
@@ -143,12 +141,10 @@ def _select_renderer(cockpit: Cockpit, live: bool, graphics: str):
     from .graphics import resolve_graphics
 
     if resolve_graphics(graphics) == "kitty":
-        try:
+        with contextlib.suppress(Exception):
             import PIL  # noqa: F401  (the Kitty renderer needs Pillow)
 
             return _KittyRenderer(cockpit)
-        except Exception:
-            pass
     return _LiveRenderer(cockpit, enabled=True)
 
 
@@ -219,9 +215,13 @@ class _KittyRenderer:
         img_row = len(header) + 1
         if not text_only:
             img_col = max(1, (width - self.IMG_COLS) // 2)
-            buf.append(f"\x1b[{img_row};{img_col}H")
-            buf.append(delete_images())
-            buf.append(place_image(self.cockpit.world_png(), self.IMG_COLS, self.IMG_ROWS))
+            buf.extend(
+                (
+                    f"\x1b[{img_row};{img_col}H",
+                    delete_images(),
+                    place_image(self.cockpit.world_png(), self.IMG_COLS, self.IMG_ROWS),
+                )
+            )
 
         below = img_row + self.IMG_ROWS
         circuit = self._lines(self.cockpit._circuit_panel(), width)
