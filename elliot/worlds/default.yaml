@@ -1,0 +1,26 @@
+world:
+  height: 8
+  width: 8
+  step_time: 0.2
+  sample_time: 0.2
+  collision_mode: 'stop'
+  control_mode: 'auto'
+
+robot:
+  - kinematics: {name: 'diff'}
+    shape: {name: 'circle', radius: 0.2}
+    state: [1.2, 1.2, 0.0]
+    goal: [6.8, 6.8, 0.0]
+    sensors:
+      - type: 'lidar2d'
+        range_min: 0.0
+        range_max: 4.0
+        angle_range: 6.283
+        number: 36
+        noise: false
+
+obstacle:
+  - shape: {name: 'circle', radius: 0.95}
+    state: [3.9, 3.9, 0.0]
+  - shape: {name: 'circle', radius: 0.45}
+    state: [5.8, 3.0, 0.0]
