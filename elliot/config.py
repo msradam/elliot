@@ -1,4 +1,4 @@
-"""Runtime configuration. Every value falls back to an ``ELLIOT_`` env var."""
+"""runtime configuration. every value falls back to an ``ELLIOT_`` env var."""
 
 from __future__ import annotations
 
@@ -30,35 +30,34 @@ def _env_int(name: str, default: int) -> int:
 
 @dataclass(frozen=True)
 class Config:
-    # Any litellm-supported provider/model target.
+    # whatever model you point me at. litellm reaches all of them.
     model: str = field(default_factory=lambda: _env("ELLIOT_MODEL", "anthropic/claude-haiku-4-5"))
     temperature: float = field(default_factory=lambda: _env_float("ELLIOT_TEMPERATURE", 0.4))
     max_tokens: int = field(default_factory=lambda: _env_int("ELLIOT_MAX_TOKENS", 512))
 
     world_path: Path = field(default_factory=lambda: Path(_env("ELLIOT_WORLD", str(DEFAULT_WORLD))))
 
-    # Distance (metres) at which the target counts as sensed, then as reached.
+    # how close (m) before i am allowed to call the target found, then reached.
     sense_radius: float = field(default_factory=lambda: _env_float("ELLIOT_SENSE_RADIUS", 2.4))
     arrive_radius: float = field(default_factory=lambda: _env_float("ELLIOT_ARRIVE_RADIUS", 0.6))
 
-    # A lidar beam shorter than this starts bending the steering away from the
-    # obstacle; it marks the path as "blocked" for the reasoning, well before
-    # anything is actually close.
+    # a beam shorter than this bends my steering off the obstacle. it means
+    # "something is in the way" long before anything is actually close.
     danger_range: float = field(default_factory=lambda: _env_float("ELLIOT_DANGER_RANGE", 0.75))
 
-    # Clearance ahead at which the navigator throttles all the way to a stop, so
-    # turning can always out-pace advancing.
+    # clearance ahead where i throttle to a dead stop, so turning always
+    # out-paces advancing and i never drive into anything.
     stop_range: float = field(default_factory=lambda: _env_float("ELLIOT_STOP_RANGE", 0.22))
 
-    # Hard cap so a confused model can never run forever.
+    # a hard stop. a confused model does not get to run me forever.
     max_ticks: int = field(default_factory=lambda: _env_int("ELLIOT_MAX_TICKS", 200))
 
-    # Driver pacing. A small delay makes the live console legible to a human and
-    # to an asciinema recording; set to 0 for tests.
+    # pacing. a small delay keeps the live console legible, to you and to a
+    # recording. tests set it to 0.
     tick_delay: float = field(default_factory=lambda: _env_float("ELLIOT_TICK_DELAY", 0.35))
 
-    # When true, the brain never calls out; it uses a deterministic reflex
-    # policy instead. Used by the offline test suite and as a no-key fallback.
+    # when set, i never call out. a deterministic reflex drives instead. the
+    # offline tests rely on it, and it is the fallback when there is no key.
     offline: bool = field(
         default_factory=lambda: _env("ELLIOT_OFFLINE", "") not in ("", "0", "false")
     )

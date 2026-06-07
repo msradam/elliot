@@ -1,8 +1,8 @@
-"""The circuit: a Burr Application mounted as an MCP server by Theodosia.
+"""the circuit: a burr application, mounted as an mcp server by theodosia.
 
-Phases are Burr actions; edges are conditional transitions. Theodosia only
-offers a transition whose condition holds against the live state, so each gate
-is a fact the world must supply, not a claim the model can make:
+the phases are burr actions, the edges are conditional transitions. theodosia
+only offers a transition whose condition holds against the live state, so every
+gate is a fact the world has to supply, not a claim i can make:
 
   BOOT -> RECON -> EXPLOIT -> EXFIL -> GHOST
 
@@ -58,7 +58,7 @@ def initial_state() -> dict[str, Any]:
 
 
 def _memory(state: State, phase: str) -> dict[str, Any]:
-    """What the machine believes right now, handed to the brain to reason over."""
+    """what the machine believes right now, handed to me to reason over."""
     return {
         "phase": phase,
         "sensors_verified": state["sensors_verified"],
@@ -70,7 +70,7 @@ def _memory(state: State, phase: str) -> dict[str, Any]:
 
 
 def _advance(world: World, brain: Brain, state: State, phase: str) -> tuple[dict, State]:
-    """Run one phase: perceive, deliberate, act, and set honest gate flags."""
+    """run one phase: read the senses, think, act, set the honest gate flags."""
     before = world.perceive()
     decision = brain.deliberate(phase, before, _memory(state, phase))
 
@@ -80,7 +80,7 @@ def _advance(world: World, brain: Brain, state: State, phase: str) -> tuple[dict
         world.hold()
     after = world.perceive()
 
-    # Carry the latched gate flags forward; each phase can only flip its own.
+    # carry the latched gate flags forward. each phase only flips its own.
     flags = {
         "sensors_verified": state["sensors_verified"],
         "target_located": state["target_located"],
@@ -143,8 +143,8 @@ def _make_actions(world: World, brain: Brain) -> dict[str, Any]:
     return actions
 
 
-# A bare (from, to) tuple is a default (always-reachable) edge; a third element
-# is the condition the world must satisfy for the edge to be offered at all.
+# a bare (from, to) tuple is an always-open edge. a third element is the
+# condition the world has to satisfy before the machine will even offer it.
 _TRANSITIONS = [
     ("boot", "recon", when(sensors_verified=True)),
     ("boot", "boot", when(sensors_verified=False)),
@@ -159,7 +159,7 @@ _TRANSITIONS = [
 
 
 def build_application(world: World, brain: Brain, *, with_tracker: bool = True) -> Application:
-    """Assemble the Burr Application that is Elliot's control circuit."""
+    """assemble the burr application that is my control circuit."""
     actions = _make_actions(world, brain)
     builder = (
         ApplicationBuilder()
@@ -179,7 +179,7 @@ def build_application(world: World, brain: Brain, *, with_tracker: bool = True) 
 
 
 def _next_hint(state, valid_next_actions, last_action, refusal=None) -> str | None:
-    """Single-line guidance appended to every step response."""
+    """one line of guidance stapled to every step response."""
     if refusal is not None:
         return "the machine refused that. you have not earned it yet. read valid_next_actions."
     if not valid_next_actions:
@@ -188,7 +188,7 @@ def _next_hint(state, valid_next_actions, last_action, refusal=None) -> str | No
 
 
 def mount_server(world: World, brain: Brain):
-    """Mount the circuit as a Theodosia MCP server (shared-app, single client)."""
+    """mount the circuit as a theodosia mcp server (shared-app, single client)."""
     import theodosia
 
     app = build_application(world, brain)

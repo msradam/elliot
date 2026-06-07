@@ -1,8 +1,8 @@
-"""Kitty terminal graphics: detect support and emit image escape sequences.
+"""kitty terminal graphics: detect support and emit the image escapes.
 
-The Kitty graphics protocol transmits a PNG and displays it inline, scaled to a
-cell box. Ghostty, Kitty, and WezTerm speak it. asciinema cannot record it, so
-the auto policy stays on the half-block renderer inside a recording.
+the kitty graphics protocol ships a png and shows it inline, scaled to a cell
+box. ghostty, kitty, and wezterm speak it. asciinema cannot record it, so the
+auto policy stays on the half-block renderer inside a recording.
 
 Protocol reference: https://sw.kovidgoyal.net/kitty/graphics-protocol/
 """
@@ -29,14 +29,14 @@ def kitty_supported() -> bool:
 
 
 def resolve_graphics(mode: str) -> str:
-    """Resolve ``auto`` to ``kitty`` or ``half`` for the current terminal."""
+    """resolve ``auto`` to ``kitty`` or ``half`` for whatever terminal you ran me in."""
     if mode in ("kitty", "half"):
         return mode
     return "kitty" if kitty_supported() else "half"
 
 
 def place_image(png: bytes, cols: int, rows: int) -> str:
-    """Escape sequence that draws ``png`` at the cursor, scaled to cols x rows."""
+    """escape sequence that draws ``png`` at the cursor, scaled to cols x rows."""
     payload = base64.standard_b64encode(png)
     chunks = [payload[i : i + _CHUNK] for i in range(0, len(payload), _CHUNK)] or [b""]
     parts: list[str] = []
@@ -50,5 +50,5 @@ def place_image(png: bytes, cols: int, rows: int) -> str:
 
 
 def delete_images() -> str:
-    """Escape sequence that removes every image (data and placements)."""
+    """escape sequence that wipes every image (data and placements)."""
     return "\x1b_Ga=d,d=A,q=2\x1b\\"

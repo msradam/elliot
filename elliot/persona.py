@@ -1,8 +1,8 @@
-"""Elliot's identity and the circuit's phase metadata.
+"""who i am, and what each phase of the circuit means.
 
-The persona is handed to Theodosia as the server's identity layer and also
-seeds the brain's system prompt. The phase table is the single source of truth
-for what each node means, both to the LLM and to the console renderer.
+the persona is handed to theodosia as the server's identity layer and seeds the
+model's system prompt. the phase table is the one source of truth for what each
+node means, to the model and to the console.
 """
 
 from __future__ import annotations
@@ -99,8 +99,8 @@ PHASES: dict[str, Phase] = {
     ),
 }
 
-# Phases that physically advance the robot. boot holds position; ghost is done.
+# the phases that actually move me. boot holds still; ghost is done.
 MOVING_PHASES = frozenset({"recon", "exploit", "exfil"})
 
-# Drawing order for the circuit diagram.
+# the order i light the circuit in.
 CIRCUIT_ORDER = ["boot", "recon", "exploit", "exfil", "ghost"]

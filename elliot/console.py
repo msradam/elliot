@@ -1,12 +1,11 @@
-"""Elliot's console: a live, green-on-black cockpit drawn with Rich.
+"""my console: a live, green-on-black cockpit drawn with rich.
 
-Two things are visible at once, which is the brief: the robot in its world, and
-the phase of the circuit that is currently lit. Around them sit the raw sensor
-readout and a scrolling log of what Elliot is thinking, what he reaches for, and
-where the machine refuses him.
+two things on screen at once, which is the whole point: me in my world, and the
+phase of the circuit that is lit. around them, the raw sensor read and a log of
+what i am thinking, what i reach for, and where the machine tells me no.
 
-The cockpit owns no simulation state. It reads the live :class:`World` for
-geometry and is fed the FSM's state each tick by the driver.
+the cockpit holds no sim state. it reads the live :class:`World` for geometry
+and is fed the machine's state each tick by the driver.
 """
 
 from __future__ import annotations
@@ -23,9 +22,9 @@ from rich.text import Text
 from .persona import CIRCUIT_ORDER, PHASES
 from .world import World
 
-# Half-block "pixel" display: each cell is two stacked pixels (``▀`` with a
-# foreground for the top and a background for the bottom), doubling vertical
-# resolution while keeping colour. Greens for the robot and its wake, grey for
+# half-block "pixel" display: each cell is two stacked pixels (``▀``, a
+# foreground for the top and a background for the bottom), which doubles the
+# vertical resolution and keeps colour. green for me and my wake, grey for the
 # walls, amber for the target.
 _PX = {
     "wall_core": "grey27",  # three bands give the obstacle a soft, rounded edge
@@ -42,12 +41,12 @@ _PX = {
     "ghost": "grey42",
 }
 
-# How many recent positions make up the wake drawn behind Elliot.
+# how many recent positions make up the wake i leave behind me.
 _WAKE = 26
 
 
 class Cockpit:
-    """Holds the log and the latest frame; renders the whole dashboard."""
+    """holds the log and the latest frame; draws the whole dashboard."""
 
     def __init__(self, world: World, model: str, grid_cols: int = 46, grid_rows: int = 22) -> None:
         self.world = world
@@ -62,7 +61,7 @@ class Cockpit:
         self._stream: tuple[str, str] | None = None  # (phase, partial narration)
 
     def stream(self, phase: str, text: str) -> None:
-        """Set the in-progress narration shown typing into the console."""
+        """set the half-typed narration the console is showing right now."""
         self._stream = (phase, text)
 
     def note(self, text: str, style: str = "green") -> None:
@@ -114,10 +113,7 @@ class Cockpit:
     def _header(self) -> Panel:
         bar = Text()
         bar.append("ELLIOT", style="bold bright_green")
-        bar.append(
-            "  // a robot that is a finite state machine. an llm drives its transitions.\n",
-            style="green",
-        )
+        bar.append("  // hello, friend\n", style="green")
         bar.append(f"model {self.model}", style="grey50")
         bar.append("   tick ", style="grey50")
         bar.append(f"{self.frame.get('tick', 0):>4}", style="bright_green")
@@ -147,7 +143,7 @@ class Cockpit:
         )
 
     def _pixel_world(self) -> Text:
-        """Render the world as a colour half-block image (two pixels per cell)."""
+        """draw the world as a colour half-block image (two pixels per cell)."""
         cols, rows = self.cols, self.rows
         ph = rows * 2  # pixel rows
         W, H = self.world.width, self.world.height
@@ -181,9 +177,9 @@ class Cockpit:
                         else:
                             put(py, px_, _PX["wall_core"])
 
-        # A short fading wake of where Elliot has just been, drawn only behind
-        # him (not the whole route), so the bright head reads as the leading end
-        # and nothing glows ahead of him to confuse the eye.
+        # a short fading wake of where i have just been, only behind me, not the
+        # whole route, so the bright head reads as the leading end and nothing
+        # glows out front to confuse you.
         wake = self.world.trail[-(_WAKE + 1) : -1]
         ramp = _PX["wake"]
         for i, (tx, ty) in enumerate(wake):
@@ -234,11 +230,11 @@ class Cockpit:
         return body
 
     def world_png(self, side: int = 760) -> bytes:
-        """Render the world as a smooth anti-aliased PNG (for the Kitty mode).
+        """draw the world as a smooth anti-aliased png (for the kitty mode).
 
-        Drawn at triple size and downsampled, so circles and the wake have clean
-        edges no half-block grid can match. Same scene as the pixel world: grey
-        obstacles, a green wake fading behind Elliot, a pulsing amber target.
+        rendered at triple size and downsampled, so the circles and the wake get
+        clean edges no half-block grid can match. same scene as the pixel world:
+        grey obstacles, a green wake fading behind me, a pulsing amber target.
         """
         from io import BytesIO
 

@@ -1,8 +1,9 @@
-"""Headless ir-sim wrapper: the world and the robot's senses.
+"""the world and my senses. a headless ir-sim wrapper.
 
-Builds the simulator with plotting disabled and exposes the readings the FSM and
-console need through :meth:`World.perceive`. Gate-relevant readings (``arrive``,
-``collision``) come straight from ir-sim, so the FSM checks facts, not beliefs.
+builds the sim with the plotting off and hands out only what the machine and the
+console need, through :meth:`World.perceive`. the readings the gates care about
+(``arrive``, ``collision``) come straight from ir-sim, so the machine checks
+facts, not anything i have only talked myself into believing.
 """
 
 from __future__ import annotations
@@ -13,8 +14,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-# ir-sim's matplotlib import must not try to attach to a display. Force Agg
-# before the library is imported anywhere in the process.
+# no display. ir-sim drags in matplotlib, so force Agg before anything imports
+# it. nobody watches this run but the console i draw myself.
 os.environ.setdefault("MPLBACKEND", "Agg")
 
 from .config import CONFIG
@@ -22,7 +23,7 @@ from .config import CONFIG
 
 @dataclass
 class Perception:
-    """A snapshot of the world from the robot's senses."""
+    """one look at the world, the way my senses report it this tick."""
 
     tick: int
     pose: tuple[float, float, float]  # x, y, heading (radians)
@@ -46,7 +47,7 @@ class Perception:
         return self.min_range < CONFIG.danger_range
 
     def summary(self) -> dict[str, object]:
-        """Compact, JSON-friendly view for the LLM prompt and the ledger."""
+        """a compact, json-friendly read for the model's prompt and the ledger."""
         return {
             "tick": self.tick,
             "position": [round(self.pose[0], 2), round(self.pose[1], 2)],
@@ -66,7 +67,7 @@ class Perception:
 
 
 class World:
-    """A single robot in a 2D ir-sim world, driven headless."""
+    """one robot in a 2d ir-sim world, driven headless."""
 
     def __init__(self, world_path: str | None = None) -> None:
         import irsim
@@ -81,13 +82,13 @@ class World:
         goal = np.asarray(self._robot.goal).flatten()
         self._goal = (float(goal[0]), float(goal[1]))
 
-        # Until the target is reached, the objective is the goal. Afterwards the
-        # objective flips to the exfil point (where Elliot booted).
+        # until i reach the target the objective is the goal. after that it
+        # flips to the exfil point, which is wherever i booted.
         self._exfil = False
         self._trail: list[tuple[float, float]] = [self._origin]
 
     def begin_exfil(self) -> None:
-        """Flip the active objective from the target to the exfil point."""
+        """i have it. flip the objective from the target to the exfil point."""
         self._exfil = True
 
     @property
@@ -143,10 +144,11 @@ class World:
         )
 
     def _target_arrived(self, distance: float) -> bool:
-        """Ground-truth arrival at whichever objective is active.
+        """ground-truth arrival at whichever objective is active.
 
-        For the target we trust ir-sim's own ``arrive`` flag. For the exfil
-        point (a coordinate ir-sim does not track as a goal) we use distance.
+        for the target i trust ir-sim's own ``arrive`` flag, nothing of mine.
+        the exfil point is just a coordinate ir-sim does not track as a goal, so
+        there i fall back to distance.
         """
         if self._exfil:
             return distance <= CONFIG.arrive_radius
@@ -158,7 +160,7 @@ class World:
         self._record_trail()
 
     def hold(self) -> None:
-        """Advance time without commanding motion (sensors still refresh)."""
+        """let time pass without moving. the senses still refresh."""
         self._env.step(np.array([[0.0], [0.0]]))
         self._tick += 1
         self._record_trail()
@@ -197,5 +199,5 @@ class World:
 
 
 def _wrap(angle: float) -> float:
-    """Wrap an angle to (-pi, pi]."""
+    """wrap an angle to (-pi, pi]."""
     return (angle + math.pi) % (2 * math.pi) - math.pi

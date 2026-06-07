@@ -1,11 +1,11 @@
-"""Elliot's reasoning, routed through litellm so the model is swappable.
+"""my reasoning, routed through litellm so the model is swappable.
 
-Called once per tick with the phase, a perception, and the FSM's current
-beliefs; returns a :class:`Decision` (motor command, proposed next phase, and a
-line of narration). The LLM decides the next phase and narrates; a gap-following
-controller computes the motor command. When ``CONFIG.offline`` is set, no key is
-present, or the model errors, the reflex path drives the whole circuit on its
-own, which is what the offline tests exercise.
+called once per tick with the phase, a fresh look at the world, and what the
+machine currently believes. returns a :class:`Decision`: a motor command, the
+phase i am reaching for, and a line of narration. i (the model) pick the phase
+and i talk; a dumb gap-following controller does the steering. with
+``CONFIG.offline`` set, no key, or the model down, the reflex drives the whole
+circuit alone, which is what the offline tests lean on.
 """
 
 from __future__ import annotations
@@ -19,21 +19,21 @@ from .config import CONFIG
 from .persona import ELLIOT_PERSONA, MOVING_PHASES, PHASES
 from .world import Perception
 
-# Matched to the ir-sim diff-drive robot's velocity limits ([1.0, 1.0]) so
-# commands are never clipped by the simulator.
+# matched to the ir-sim diff robot's limits ([1.0, 1.0]) so the sim never
+# clips what i ask for.
 LINEAR_MAX = 1.0
 LINEAR_MIN = -0.2
 ANGULAR_MAX = 1.0
 
 _KNOWN_ACTIONS = set(PHASES)
 _FENCE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
-# Captures the value of the streaming "narration" field while the JSON is still
-# being generated, up to the next unescaped quote (which may not exist yet).
+# pulls the "narration" value out of the json while it is still streaming, up to
+# the next unescaped quote, which may not exist yet.
 _NARR = re.compile(r'"narration"\s*:\s*"((?:[^"\\]|\\.)*)')
 
 
 def _partial_narration(buffer: str) -> str | None:
-    """Best-effort narration text from an incomplete JSON response."""
+    """best-effort narration out of half-finished json."""
     match = _NARR.search(buffer)
     if match is None:
         return None
@@ -52,8 +52,8 @@ class Decision:
 class Brain:
     def __init__(self) -> None:
         self._offline = CONFIG.offline
-        # Optional sink ``(phase, partial_narration) -> None`` called as the
-        # model streams, so the console can type the narration in live.
+        # optional sink ``(phase, partial_narration) -> None``, called as i
+        # stream, so the console can type the narration in live.
         self.on_stream = None
         self._litellm = None
         if not self._offline:
@@ -72,7 +72,7 @@ class Brain:
         try:
             raw = self._ask_model(phase, perception, memory)
             return self._parse(raw, phase, perception, memory)
-        except Exception as exc:  # any model/parse failure degrades, never crashes
+        except Exception as exc:  # anything the model throws degrades to reflex; i do not crash
             decision = self._reflex(phase, perception, memory, reason="fallback")
             decision.thought = f"[model unreachable: {type(exc).__name__}] {decision.thought}"
             return decision
@@ -122,7 +122,7 @@ class Brain:
         return response.choices[0].message.content or ""
 
     def _stream(self, messages: list[dict], phase: str) -> str:
-        """Stream the completion, pushing the narration field out as it grows."""
+        """stream the completion, pushing the narration out as it grows."""
         chunks = self._litellm.completion(
             model=CONFIG.model,
             messages=messages,
@@ -138,17 +138,17 @@ class Brain:
                 continue
             acc += delta
             partial = _partial_narration(acc)
-            # Emit at word granularity (a few characters' growth) rather than
-            # every token, so the reveal stays smooth without a frame per token.
+            # emit at word granularity (a few chars of growth), not every token,
+            # so the reveal stays smooth without a frame per token.
             if partial is not None and len(partial) - emitted >= 4:
                 emitted = len(partial)
                 self.on_stream(phase, partial)
         return acc
 
     def _parse(self, raw: str, phase: str, perception: Perception, memory: dict) -> Decision:
-        # The motor command always comes from the reliable local controller; the
-        # model is trusted for strategy (the next phase to reach for) and voice,
-        # not for low-level steering, which it does poorly.
+        # the motor command always comes from the dumb local controller. i trust
+        # the model for strategy (the phase to reach for) and for the voice, never
+        # for the steering, which it is bad at.
         motor = self._reflex(phase, perception, memory)
         payload = self._extract_json(raw)
         if payload is None:
@@ -191,10 +191,10 @@ class Brain:
             }.get(phase, "holding position.")
             return Decision(thought, 0.0, 0.0, next_action, source=reason)
 
-        # Endgame: once the target is close and nothing is between us and it,
-        # drive straight at it under direct proportional control. The gap
-        # planner's forward cone can't turn the body all the way around when the
-        # target ends up behind, so bypass it here and break the rear symmetry.
+        # endgame: once the target is close and the path to it is clear, drive
+        # straight at it under plain proportional control. the gap planner's
+        # forward cone cannot spin me all the way around when the target ends up
+        # behind me, so bypass it here and break the rear symmetry.
         if perception.distance < 1.6 and perception.front_range > perception.distance - 0.2:
             steer = perception.bearing_to_target
             if abs(steer) > math.pi - 0.25:  # target dead behind: commit to one turn
@@ -205,13 +205,13 @@ class Brain:
             return Decision(note, linear, angular, next_action, source=reason)
 
         steer, clear, boxed = _plan(perception)
-        # Forward speed scales with clearance ahead and alignment with the
-        # chosen heading; sharp turns crawl. When boxed in, rotate in place to
+        # forward speed scales with the clearance ahead and how aligned i am with
+        # the heading i picked; sharp turns crawl. boxed in, i turn in place to
         # hunt for a gap instead of grinding forward.
         alignment = max(0.12, math.cos(steer))
-        # Throttle on clearance in the direction of travel (not all around) so
-        # turning can out-pace advancing and Elliot never cuts a corner, while
-        # an obstacle merely off to the side does not freeze him.
+        # throttle on the clearance where i am going, not all around, so turning
+        # out-paces advancing and i never cut a corner. something off to the side
+        # is not a reason to freeze.
         span = max(CONFIG.danger_range - CONFIG.stop_range, 0.1)
         proximity = _clamp((perception.front_range - CONFIG.stop_range) / span, 0.0, 1.0)
         if boxed:
@@ -238,13 +238,13 @@ class Brain:
 
     @staticmethod
     def _reflex_next(phase: str, perception: Perception, memory: dict) -> str:
-        """Propose the next phase as soon as Elliot is plausibly close.
+        """reach for the next phase the moment i am plausibly close.
 
-        These thresholds are looser than the FSM's gates, so the reach lands
-        before the gate opens and the machine refuses until the flag fires.
+        these thresholds are looser than the machine's gates, so the reach lands
+        before the gate opens and i get refused until the flag actually fires.
         """
         if phase == "boot":
-            return "recon"  # always impatient to start; refused until verified
+            return "recon"  # always impatient to start. refused until verified
         if phase == "recon":
             eager = perception.distance <= CONFIG.sense_radius * 1.8
             return "exploit" if (memory.get("target_located") or eager) else "recon"
@@ -258,20 +258,20 @@ class Brain:
 
 
 def _plan(perception: Perception) -> tuple[float, float, bool]:
-    """Gap-following local planner.
+    """gap-following local planner.
 
-    Pick the steerable bearing that is clear enough to drive through and lies
-    closest to the target's direction. Returns ``(steer, clearance, boxed)``.
-    This rounds obstacles without a global map and, unlike a naive potential
-    field, does not stall in the symmetric pocket between two obstacles: it
-    commits to a gap and follows it.
+    pick the steerable bearing that is clear enough to drive through and lies
+    closest to the target's direction. returns ``(steer, clearance, boxed)``. it
+    rounds obstacles with no global map and, unlike a naive potential field, does
+    not stall in the dead pocket between two obstacles: it commits to a gap and
+    follows it.
     """
     ranges, bearings = perception.ranges, perception.bearings
     if not ranges:
         return perception.bearing_to_target, perception.open_range, False
 
-    needed = 0.65  # body radius plus margin; the clearance a gap must offer
-    forward_cone = math.radians(125)  # don't try to reverse through a gap
+    needed = 0.65  # body radius plus margin. the clearance a gap has to give me
+    forward_cone = math.radians(125)  # i do not reverse through gaps
     target_bearing = perception.bearing_to_target
     n = len(ranges)
 
@@ -281,9 +281,9 @@ def _plan(perception: Perception) -> tuple[float, float, bool]:
     for i, (r, b) in enumerate(zip(ranges, bearings)):
         if abs(b) > forward_cone:
             continue
-        # A direction is passable only if it and its neighbours are clear, so a
-        # one-beam slit between obstacles is not mistaken for a doorway. Clearance
-        # beyond the target's own distance does not help, so cap it.
+        # a direction is passable only if it and its neighbours are clear, so a
+        # one-beam slit between obstacles is not mistaken for a door. clearance
+        # past the target's own distance buys nothing, so cap it.
         window = [ranges[j] for j in range(max(0, i - 2), min(n, i + 3))]
         local = min(window)
         effective = min(local, perception.distance)

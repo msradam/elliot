@@ -1,10 +1,9 @@
-"""Command line entrypoint: ``elliot`` (or ``python run.py``).
+"""the command line: ``elliot`` (or ``python run.py``).
 
-Flags are translated into the ``ELLIOT_*`` environment variables that
-:mod:`elliot.config` reads, then the driver is imported and run. Online mode
-needs an API key in the environment; the recommended way to supply one is
-envchain, e.g. ``envchain ai elliot``. With no key present the CLI falls back to
-the offline reflex navigator so the loop still runs end to end.
+flags become the ``ELLIOT_*`` env vars that :mod:`elliot.config` reads, then the
+driver runs. online needs an api key in the environment; envchain is the clean
+way (``envchain ai elliot``). with no key i fall back to the offline reflex so
+the loop still finishes.
 """
 
 from __future__ import annotations

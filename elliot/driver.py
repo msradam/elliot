@@ -1,9 +1,9 @@
-"""The driver: an MCP client that runs the circuit and renders it.
+"""the driver: an mcp client that runs the circuit and draws it.
 
-Each tick it proposes the phase the last FSM action wrote into state, calls the
+each tick it proposes the phase the last action wrote into state, calls the
 ``step`` tool, and on a refusal takes an allowed move from ``valid_next_actions``
-instead. Like :func:`theodosia.drive_claude`, but model-agnostic (the model runs
-inside the FSM actions via litellm) and wired to the cockpit.
+instead. like :func:`theodosia.drive_claude`, but model-agnostic (the model runs
+inside the actions, through litellm) and wired to the cockpit.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from .world import World
 
 
 def _quiet() -> None:
-    """Silence library chatter so it never corrupts the live display."""
+    """shut the libraries up so their chatter never corrupts the live display."""
     os.environ.setdefault("MPLBACKEND", "Agg")
     for name in ("theodosia", "fastmcp", "mcp", "FastMCP", "LiteLLM", "litellm", "httpx"):
         logging.getLogger(name).setLevel(logging.ERROR)
@@ -36,8 +36,8 @@ def _quiet() -> None:
 
 
 def _fallback(valid: list[str]) -> str | None:
-    """The disciplined choice when Elliot's reach is refused: keep working the
-    phase he is in (the self-loop is always first in the valid set)."""
+    """the disciplined choice when my reach is refused: keep working the phase i
+    am in (the self-loop is always first in the valid set)."""
     return valid[0] if valid else None
 
 
@@ -50,7 +50,7 @@ async def drive(
     live: bool = True,
     graphics: str = "auto",
 ) -> dict:
-    """Run the circuit to GHOST (or the tick cap). Returns a run summary."""
+    """run the circuit to ghost (or the tick cap). returns a run summary."""
     _quiet()
     world = world or World()
     brain = brain or Brain()
@@ -74,10 +74,12 @@ async def drive(
         proposed: str | None = "boot"
 
         renderer = _select_renderer(cockpit, live, graphics)
-        # Stream the narration in live. Inside an asciinema recording screen-mode
-        # Live repaints per token and bloats the cast, so skip it there unless
-        # ELLIOT_FORCE_STREAM asks for it anyway.
-        recording = os.environ.get("ASCIINEMA_SESSION") and not os.environ.get("ELLIOT_FORCE_STREAM")
+        # stream the narration in live. inside a recording, screen-mode Live
+        # repaints per token and bloats the cast, so skip it there unless
+        # ELLIOT_FORCE_STREAM insists.
+        recording = os.environ.get("ASCIINEMA_SESSION") and not os.environ.get(
+            "ELLIOT_FORCE_STREAM"
+        )
         if live and not CONFIG.offline and not recording:
             brain.on_stream = lambda phase, text: (
                 cockpit.stream(phase, text),
@@ -124,7 +126,7 @@ async def drive(
 
 
 async def _cold_start(client, cockpit: Cockpit) -> None:
-    """Read the circuit map once at session start."""
+    """read the circuit map once at session start, before i trust it."""
     cockpit.note("cold boot. reading the circuit map before i trust it.", "bright_green")
     try:
         res = await client.read_resource("theodosia://graph")
@@ -135,7 +137,7 @@ async def _cold_start(client, cockpit: Cockpit) -> None:
 
 
 def _select_renderer(cockpit: Cockpit, live: bool, graphics: str):
-    """Pick the renderer: none, half-block (Rich), or Kitty bitmap graphics."""
+    """pick the renderer: none, half-block (rich), or kitty bitmap graphics."""
     if not live:
         return _LiveRenderer(cockpit, enabled=False)
     from .graphics import resolve_graphics
@@ -151,7 +153,7 @@ def _select_renderer(cockpit: Cockpit, live: bool, graphics: str):
 
 
 class _LiveRenderer:
-    """Wraps rich.live.Live (half-block cockpit), or no-ops when disabled."""
+    """wraps rich.live.Live (the half-block cockpit), or no-ops when disabled."""
 
     def __init__(self, cockpit: Cockpit, enabled: bool) -> None:
         self.cockpit = cockpit
@@ -162,8 +164,8 @@ class _LiveRenderer:
         if self.enabled:
             from rich.live import Live
 
-            # One repaint per tick (auto_refresh off) keeps an asciinema capture
-            # small: a full-screen Layout auto-refreshing would emit thousands of
+            # one repaint per tick (auto_refresh off) keeps a recording small. a
+            # full-screen Layout left to auto-refresh would emit thousands of
             # redundant frames.
             self._live = Live(
                 self.cockpit.renderable(), screen=True, auto_refresh=False, transient=False
@@ -181,9 +183,9 @@ class _LiveRenderer:
 
 
 class _KittyRenderer:
-    """Composite the screen by hand: a bitmap world plus text panels around it.
+    """composite the screen by hand: a bitmap world, text panels around it.
 
-    Each tick redraws the header, places the world PNG via the Kitty graphics
+    each tick redraws the header, places the world png through the kitty graphics
     protocol, and lays the circuit and console panels around it with absolute
     cursor moves.
     """
@@ -210,10 +212,10 @@ class _KittyRenderer:
         header = self._lines(self.cockpit._header(), width)
         self._place(buf, 1, 1, header)
 
-        # The bitmap world carries position and heading; the sensor panel is
-        # dropped here to keep the image large and the layout inside one screen.
-        # While the narration streams, text_only leaves the last image in place
-        # so the PNG is not retransmitted on every token.
+        # the bitmap world already shows position and heading, so the sensor
+        # panel is dropped here to keep the image big and everything on one
+        # screen. while the narration streams, text_only leaves the last image
+        # alone so the png is not resent on every token.
         img_row = len(header) + 1
         if not text_only:
             img_col = max(1, (width - self.IMG_COLS) // 2)
